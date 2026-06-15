@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- NextAuth models ----------
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String? // for credentials provider (hashed)
+
+  accounts Account[]
+  sessions Session[]
+
+  // App-specific relations
+  careerTestResults CareerTestResult[]
+  scholarshipApps   ScholarshipApplication[]
+  pathwayProgress   PathwayProgress[]
+  mentorBookings    MentorBooking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- App models ----------
+
+model CareerTestResult {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  answers     Json
+  scores      Json // e.g. { Analytical: 82, Creative: 68, ... }
+  topMatches  Json // e.g. [{ career: "AI/ML Engineer", match: 94 }]
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Mentor {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  role      String
+  bio        String?
+  avatar    String
+  color     String
+  expertise String[]
+  rating    Float    @default(4.5)
+  sessions  Int      @default(0)
+  price     Int      @default(0) // per session, in INR
+
+  bookings MentorBooking[]
+
+  createdAt DateTime @default(now())
+}
+
+model MentorBooking {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  mentorId  String   @db.ObjectId
+  slot      DateTime
+  topic     String?
+  status    String   @default("pending") // pending | confirmed | completed | cancelled
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mentor Mentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Scholarship {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  type      String
+  title     String
+  provider  String
+  amount    String
+  deadline  String
+  tags      String[]
+  color     String
+  isNew     Boolean  @default(false)
+
+  applications ScholarshipApplication[]
+
+  createdAt DateTime @default(now())
+}
+
+model ScholarshipApplication {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  scholarshipId String   @db.ObjectId
+  status        String   @default("submitted") // submitted | under_review | accepted | rejected
+  notes         String?
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scholarship Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model Pathway {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String  @unique
+  label       String
+  color       String
+  description String
+  duration    String
+  steps       Json // array of { phase, tasks, duration }
+
+  progress PathwayProgress[]
+}
+
+model PathwayProgress {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  pathwayId   String   @db.ObjectId
+  completedSteps Int[] @default([])
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pathway Pathway @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, pathwayId])
+}

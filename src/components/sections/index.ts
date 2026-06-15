@@ -1,0 +1,9 @@
+export { HeroSection } from './HeroSection';
+export { ProblemSection } from './ProblemSection';
+export { FeaturesSection } from './FeaturesSection';
+export { AICareerTestSection } from './AICareerTestSection';
+export { CareerPathwaySection } from './CareerPathwaySection';
+export { ScholarshipSection } from './ScholarshipSection';
+export { CommunitySection } from './CommunitySection';
+export { SuccessStoriesSection } from './SuccessStoriesSection';
+export { AppPreviewSection } from './AppPreviewSection';
